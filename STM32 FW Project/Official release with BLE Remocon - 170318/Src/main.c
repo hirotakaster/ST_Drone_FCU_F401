@@ -100,7 +100,6 @@ int32_t fly_ready = 0;
 unsigned char ch, ch_flag;
 
 uint32_t tim9_event_flag = 0, tim9_cnt = 0, tim9_cnt2 = 0;
-float tmp_euler_z = 0;
 
 
 /* BLE module */
@@ -140,19 +139,16 @@ static void SendMotionData(void);
 static void SendBattEnvData(void);
 static void SendArmingData(void);
 
-
-
 /* USER CODE BEGIN 0 */
 P_PI_PIDControlTypeDef pid;
 EulerAngleTypeDef euler_rc, euler_ahrs, euler_rc_fil, euler_rc_y_pre[4], euler_rc_x_pre[4];
 AxesRaw_TypeDef acc, gyro, mag, acc_fil_int, gyro_fil_int, mag_fil_int;
-AxesRaw_TypeDef_Float acc_fil, acc_y_pre[4], acc_x_pre[4], acc_ahrs_FIFO[FIFO_Order], acc_FIFO[FIFO_Order], acc_ahrs;
-AxesRaw_TypeDef_Float gyro_fil, gyro_y_pre[4], gyro_x_pre[4], gyro_ahrs_FIFO[FIFO_Order], gyro_FIFO[FIFO_Order], gyro_ahrs;
+AxesRaw_TypeDef_Float acc_fil, acc_y_pre[4], acc_x_pre[4], acc_ahrs_FIFO[FIFO_Order], acc_FIFO[FIFO_Order];
+AxesRaw_TypeDef_Float gyro_fil, gyro_y_pre[4], gyro_x_pre[4], gyro_ahrs_FIFO[FIFO_Order], gyro_FIFO[FIFO_Order];
 AxesRaw_TypeDef_Float mag_fil;
 AxesRaw_TypeDef acc_off_calc, gyro_off_calc, acc_offset, gyro_offset;
 EulerAngleTypeDef euler_ahrs_offset;
 int sensor_init_cali = 0, sensor_init_cali_count = 0;
-int gyro_cali_count = 0;
 
 typedef struct
 {
@@ -182,10 +178,7 @@ typedef struct
 //100hz, 800hz
 IIR_Coeff gyro_fil_coeff = {0.94280904158206336,  -0.33333333333333343, 0.09763107293781749 , 0.19526214587563498 , 0.09763107293781749 };
 
-Attitude_Degree  Fly, Fly_offset, Fly_origin;
-Gyro_Rad gyro_rad, gyro_degree, gyro_cali_degree;
 MotorControlTypeDef motor_pwm;
-int count1 = 0, count2 = 0;
 AHRS_State_TypeDef ahrs;
 float press, press_zero_level;
 float temperature;
@@ -209,9 +202,12 @@ int32_t BytesToWrite;
 {
 
   /* USER CODE BEGIN 1 */
-  int16_t pid_interval, i;
-  
+  AxesRaw_TypeDef_Float acc_ahrs;
+  AxesRaw_TypeDef_Float gyro_ahrs;
+  int count1 = 0, count2 = 0;
   int mytimcnt = 0;
+  int16_t pid_interval, i;
+
   acc_fil.AXIS_X = 0;
   acc_fil.AXIS_Y = 0;
   acc_fil.AXIS_Z = 0;
@@ -526,11 +522,6 @@ int32_t BytesToWrite;
         euler_ahrs_offset.thx = 0;
         euler_ahrs_offset.thy = 0;
       }
-
-      Fly_origin.X_Degree = (int16_t)(euler_ahrs.thx * 5730);
-      Fly_origin.Y_Degree = (int16_t)(euler_ahrs.thy * 5730);
-      Fly_origin.Z_Degree = (int16_t)(euler_ahrs.thz * 5730);
-
 
       if(gTHR<MIN_THR)
       {
@@ -868,6 +859,8 @@ void MX_GPIO_Init(void)
  */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
+  Gyro_Rad gyro_rad;
+
   if(sensor_init_cali == 0)
   {
     sensor_init_cali_count++;
